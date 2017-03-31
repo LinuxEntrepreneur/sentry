@@ -361,7 +361,7 @@ function Sketch:import(payload)
     elseif not table.is_empty(source_estimators) and not table.is_empty(destination_estimators) then
         -- Merge estimators.
         for key, value in pairs(source_estimators) do
-            redis.call('HINCRBY', self.estimators, key, value)
+            redis.call('HINCRBY', self.estimates, key, value)
         end
 
         -- Rebuild the index by using the keys from both indices and the new estimates.
@@ -399,16 +399,23 @@ function Sketch:import(payload)
         -- If we're just writing the index values (and not estimators) to the
         -- destination, we can just directly increment the sketch which will
         -- take care of estimator updates and index truncation.
-        self:increment(source_index)
+        local items = {}
+        for key, value in pairs(source_index) do
+            table.insert(
+                items,
+                {key, value}
+            )
+        end
+        self:increment(items)
     elseif not table.is_empty(source_estimators) and table.is_empty(destination_estimators) then
         -- Build the estimators for the side that doesn't have them.
         for key, score in pairs(destination_index) do
             local coordinates = self:coordinates(key)
             local estimates = map(
-                function (coordinates)
+                function (coordinate)
                     return self:observations(coordinate)
                 end,
-                coordinate
+                coordinates
             )
             for _, item in pairs(zip({coordinates, estimates})) do
                 local coordinate, estimate = unpack(item)
@@ -426,7 +433,7 @@ function Sketch:import(payload)
 
         -- Merge the estimators.
         for key, value in pairs(source_estimators) do
-            redis.call('HINCRBY', self.estimates, k, value)
+            redis.call('HINCRBY', self.estimates, key, value)
         end
 
         -- Rebuild the index by using the keys from both indices and the new estimates.
