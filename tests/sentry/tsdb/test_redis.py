@@ -331,10 +331,11 @@ class RedisTSDBTest(TestCase):
     def test_frequency_table_import_export_no_estimators(self):
         client = self.db.cluster.get_local_client_for_key('key')
 
+        parameters = [64, 5, 10]
+
         CountMinScript(
             ['1:i', '1:e'],
-            [
-                'INCR', 64, 3, 10,
+            ['INCR'] + parameters + [
                 1, 'foo',
                 2, 'bar',
                 3, 'baz',
@@ -344,8 +345,7 @@ class RedisTSDBTest(TestCase):
 
         CountMinScript(
             ['2:i', '2:e'],
-            [
-                'INCR', 64, 3, 10,
+            ['INCR'] + parameters + [
                 1, 'alpha',
                 2, 'beta',
                 3, 'gamma',
@@ -366,7 +366,7 @@ class RedisTSDBTest(TestCase):
 
         exports = CountMinScript(
             ['2:i', '2:e'],
-            ['EXPORT', 64, 3, 10],
+            ['EXPORT'] + parameters,
             client=client,
         )
 
@@ -374,7 +374,7 @@ class RedisTSDBTest(TestCase):
 
         CountMinScript(
             ['1:i', '1:e'],
-            ['IMPORT', 64, 3, 10, exports[0]],
+            ['IMPORT'] + parameters + [exports[0]],
             client=client,
         )
 

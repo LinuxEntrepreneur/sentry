@@ -354,10 +354,17 @@ function Sketch:import(payload)
     local destination_estimators = response_to_table(redis.call('HGETALL', self.estimates))
 
     if table.is_empty(source_estimators) and table.is_empty(destination_estimators) then
-        -- Merge indices.
-        -- Rewrite index.
-        -- Spill over index into estimators if necessary.
-        error('not implemented')
+        -- If we're just writing the index values (and not estimators) to the
+        -- destination, we can just directly increment the sketch which will
+        -- take care of estimator updates and index truncation.
+        local items = {}
+        for key, value in pairs(source_index) do
+            table.insert(
+                items,
+                {key, value}
+            )
+        end
+        self:increment(items)
     elseif not table.is_empty(source_estimators) and not table.is_empty(destination_estimators) then
         -- Merge estimators.
         for key, value in pairs(source_estimators) do
